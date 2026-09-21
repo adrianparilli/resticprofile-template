@@ -1,0 +1,53 @@
+# Environment variables to be used among all profiles
+
+# Path to locate and run custom scripts
+# "/etc/resticprofile/scripts" is useful for most use cases
+# "/scripts" on container w/ bind mounts to control scripts externally
+#SCRIPTS_PATH=
+
+# Proxy Options
+# Use a tunneled proxy (e.g. cloudflare-svc) instead of a plain connection, circumventing ISP bandwidth limits and DPI
+#ALL_PROXY=socks5h://127.0.0.1:1080
+#HTTPS_PROXY=socks5h://127.0.0.1:1080
+
+# SSH Related Options
+# When operating into another server, SSH may work as an optional tunnel
+# for communications
+
+# User & host (FQDN or IP) to connect
+#SSH_LOGIN=
+
+# Private SSH key to connect to a host is mandatory, and it's assumed that
+# the public counterpart of this key is correctly appened into host and user's
+# authorized_keys file you are attempting to connect
+# "~/.ssh/<keyfile>"                    # Use your own configured key
+# "/etc/resticprofile/secrets/<keyfile> # Use a custom key
+# "/secrets/<keyfile>"                  # Use any key bind mounted in Docker
+#SSH_IDENTITY_FILE=
+
+# These default SSH options allow non-interactive and -mostly- silent communication
+# between this host and the destination host
+# "-o IdentityFile=$SSH_IDENTITY_FILE -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10"
+#SSH_OPTIONS=
+
+# Notification Methods
+# This is an alternative method to send notifications about failed commands,
+# besides of native resticprofile's HTTP hooks in absence or monitoring stacks
+# mail: requires configured MTA in order to send emails
+# send-notify: requires libnotify and a user with desktop configured
+# unraid-notify: Unraid OS specific notification system
+# When unset, no notifications are sent
+#NOTIFY_METHOD=
+
+# When method is mail, a destination mail address is required
+#NOTIFY_MAIL_ADDR=
+
+# When method is send-notify, a desktop user is required
+#NOTIFY_SEND_USER=
+
+# NOTE: When running inside docker, notification commands are sent to the
+# configured host in SSH options. For instance, requirements per method
+# are needed on the other endpont instead of the host running resticprofile.
+
+# References:
+# https://creativeprojects.github.io/resticprofile/reference/profile/index.html

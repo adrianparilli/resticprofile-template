@@ -1,0 +1,334 @@
+version: "2"
+
+# Relative path(s) to this file location to search for profiles
+includes:
+  - profiles.d/*.yaml
+
+##########################################
+# Global Options. Appliy to all profiles #
+##########################################
+global:
+  # Sets the destination for command output (stderr/stdout).
+  # log: sends output to the log file (if specified)
+  # console: sends it to the console instead
+  # auto: sends it to both if console is a terminal otherwise to log only
+  # Is one of auto, log, console, all
+  # (Default is auto)
+  command-output: all
+  # Sets the default log destination to be used if not specified in
+  # "–log" or "schedule-log"
+  # Standard systems
+  log: /var/log/resticprofile/resticprofile.log
+  # Docker bind mount
+  #log: /logs/resticprofile.log
+  # Sets process priority class for resticprofile and child processes
+  # (on any OS). Is one of idle, background, low, normal, high, highest
+  # (Default is normal)
+  priority: low
+  # Initialize a repository if missing
+  # (Default is false)
+  initialize: true
+  # Enables setting the linux IO priority class and level for resticprofile
+  # and child processes (only on linux OS)
+  # (Default is false)
+  ionice: true
+  # Sets the linux “ionice-class” (I/O scheduling class) to apply when
+  # “ionice” is enabled (1=realtime, 2=best-effort, 3=idle)
+  # (Default is 2)
+  ionice-class: 2
+  # Sets the linux “ionice-level” (I/O priority within the scheduling class) to
+  # apply when “ionice” is enabled (0=highest priority, 7=lowest priority)
+  # (Default is 0)
+  ionice-level: 7
+  # Sets defaults for all schedules
+  schedule-defaults:
+    # Redirect the output into a log file or to syslog when running on schedule
+    # https://creativeprojects.github.io/resticprofile/configuration/logs/
+    # Standard systems
+    log: /var/log/resticprofile/scheduled-tasks.log
+    # Docker bind mount
+    #log: /logs/scheduled-tasks.log
+  # Selects the scheduler: auto, launchd, systemd, taskscheduler, crond
+  # On docker containers, explicitly choose crond
+  # Default is auto (uses the default scheduler of your operating system)
+  scheduler: auto
+  # The shell that is used to run commands (default is OS specific, or auto).
+  # Examples: sh, bash, pwsh, powershell, cmd
+  # Standard systems: bash
+  # Official docker image: ash
+  shell: auto
+
+#########################################################################
+# Default profiles. Use these templates below to build custom profiles, #
+# changing defaults onto them as needed.                                #
+#########################################################################
+profiles:
+#------------------------------------------------------------------------------
+# Default profile (ALL profiles depend on this one)
+#------------------------------------------------------------------------------
+  default:
+    # Additional arguments to pass to all restic commands
+    #args:
+      #- "-o"                   # This example forces to use three connections
+      #- "s3.connections=3"     # When working on S3 compatible endpoints
+    # Additional dotenv files to load and set as environment in any
+    # child process
+    env-file:
+      - .env-common
+    # Be verbose (true for level 1 or a number for increased verbosity,
+    # max level is 2, default is 0)
+    verbose: 0
+    # Allows to lock when the existing lock is considered stale
+    force-inactive-lock: true
+    # Path to the lock file to use with resticprofile locks
+    # Standard systems
+    lock: /var/run/resticprofile/profile-{{ .Profile.Name }}.lock
+    # Docker bind mount
+    #lock: /locks/profile-{{ .Profile.Name }}.lock
+    # Command(s) to be executed before any command
+    run-before:
+      # File 'timestamp' gets the current date & time, to be used for commands and files
+      - echo $(date +%F.%T) > {{ tempFile "timestamp" }}
+      # Notify about process begin
+      - echo "===== $PROFILE_COMMAND of profile $PROFILE_NAME started at $(date +%c) ====="
+    # Commands to be executed after any failed command, and/or any other 'run-after-fail' section
+    run-after-fail:
+      # Show error details:
+      - echo "*** WARNING! Command $ERROR_COMMANDLINE ended with $ERROR_MESSAGE"
+      - echo "*** =======> $ERROR_STDERR"
+      # Notifies, if any method is configured
+      - if [ -n $NOTIFY_METHOD ]; then $SCRIPTS_PATH/notify_error.sh $NOTIFY_METHOD; fi
+    # Commands to be executed after everything has been processed
+    run-finally:
+      # Notify about process end:
+      - echo "===== $PROFILE_COMMAND of profile $PROFILE_NAME ended at $(date +%c) =====" ; echo ""
+
+#------------------------------------------------------------------------------
+# Backup only, default tag is same profile name. Useful for snapshots in batch,
+# applying maintenance via default-forget (below) after backups has been done.
+#------------------------------------------------------------------------------
+  default-backup:
+    inherit: default
+    backup:
+      # Excludes cache directories that are marked with a CACHEDIR.TAG file
+      # (Default is false)
+      exclude-caches: true
+      # Commands to be run between profile's 'run-before' and `restic backup`
+      # command:
+      run-before:
+        - echo "Ready to begin with $PROFILE_COMMAND of $PROFILE_NAME data."
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+      # Only consider snapshots including tag[,tag,...]. Boolean true is
+      # replaced with the tags from section “backup”.
+      # Examples: true, false, "tag"
+      tag: {{ .Profile.Name }}
+
+#------------------------------------------------------------------------------
+# Applies retention policy in all tags and hosts at once, deleting snapshots
+# older than 30 days (but always keeping the last one) Useful to run after
+# multiple backups made in a batch operation.
+#------------------------------------------------------------------------------
+  default-forget:
+    inherit: default
+    forget:
+      # Only consider snapshots for this host (can be specified multiple times)
+      # (default: $RESTIC_HOST). Boolean true is replaced with the hostname of
+      # the system. Examples: true, false, "host")
+      host: false
+      # Keep the last n hourly snapshots (use ‘unlimited’ to keep all hourly
+      # snapshots. Default is 0)
+      keep-hourly: 0
+      # Keep the last n daily snapshots (use ‘unlimited’ to keep all daily
+      # snapshots. Default is 0)
+      keep-daily: 0
+      # Keep the last n weekly snapshots (use ‘unlimited’ to keep all weekly
+      # snapshots. Default is 0)
+      keep-weekly: 0
+      # Keep the last n monthly snapshots (use ‘unlimited’ to keep all monthly
+      # snapshots. Default is 0)
+      keep-monthly: 0
+      # Keep the last n yearly snapshots (use ‘unlimited’ to keep all yearly
+      # snapshots. Default is 0)
+      keep-yearly: 0
+      # keep snapshots that are newer than duration (eg. 1y5m7d2h)
+      # relative to the latest snapshot
+      keep-within: 30d
+      # keep the last n snapshots (use ‘unlimited’ to keep all snapshots,
+      # default is 0)
+      keep-last: 1
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+      # Prune options:
+      # Automatically run the ‘prune’ command if snapshots have been removed
+      # (Default is false)
+      prune: true
+      # Repack pack files below 80% of target pack size (restic >= 0.14.0)
+      # (Default is false)
+      repack-small: true
+      # Repack all uncompressed data (restic >= 0.14.0)
+      # (Default is false)
+      repack-uncompressed: true
+      # Only consider snapshots including tag[,tag,...]. Boolean true is
+      # replaced with the tags from section “backup”.
+      # Examples: true, false, "tag"
+      tag: false
+
+#------------------------------------------------------------------------------
+# Performs both backup and retention policy into a single schedule. Useful for
+# single snapshots on standalone systems. Only takes in count its same hostname
+# and declared tag(s), leaving untouched other snapshots into the repository.
+#------------------------------------------------------------------------------
+  default-backup-retention:
+    inherit: default-backup
+    retention:
+      # Apply retention after the backup command succeeded. Defaults to true in
+      # configuration format v2 if any “keep-*” flag is set and “before-backup”
+      # is unset
+      after-backup: true
+      # Only consider snapshots for this host (can be specified multiple times)
+      # (default: $RESTIC_HOST). Boolean true is replaced with the hostname of
+      # the system. Examples: true, false, "host")
+      host: true
+      # Keep the last n hourly snapshots (use ‘unlimited’ to keep all hourly
+      # snapshots. Default is 0)
+      keep-hourly: 0
+      # Keep the last n daily snapshots (use ‘unlimited’ to keep all daily
+      # snapshots. Default is 0)
+      keep-daily: 0
+      # Keep the last n weekly snapshots (use ‘unlimited’ to keep all weekly
+      # snapshots. Default is 0)
+      keep-weekly: 0
+      # Keep the last n monthly snapshots (use ‘unlimited’ to keep all monthly
+      # snapshots. Default is 0)
+      keep-monthly: 0
+      # Keep the last n yearly snapshots (use ‘unlimited’ to keep all yearly
+      # snapshots. Default is 0)
+      keep-yearly: 0
+      # keep snapshots that are newer than duration (eg. 1y5m7d2h)
+      # relative to the latest snapshot
+      keep-within: 30d
+      # keep the last n snapshots (use ‘unlimited’ to keep all snapshots,
+      # default is 0)
+      keep-last: 1
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+      # Prune options:
+      # Automatically run the ‘prune’ command if snapshots have been removed
+      # (Default is false)
+      prune: true
+      # Repack pack files below 80% of target pack size (restic >= 0.14.0)
+      # (Default is false)
+      repack-small: true
+      # Repack all uncompressed data (restic >= 0.14.0)
+      # (Default is false)
+      repack-uncompressed: true
+      # Only consider snapshots including tag[,tag,...]. Boolean true is
+      # replaced with the tags from section “backup”.
+      # Examples: true, false, "tag"
+      tag: true
+
+#------------------------------------------------------------------------------
+# Checks a repository structure for consistency (doesn't check data by default)
+# Needs to be run on a separated schedule.
+#------------------------------------------------------------------------------
+  default-check:
+    inherit: default
+    check:
+      # Reads all data blobs.
+      # This is very slow on large repos located at remote locations.
+      # Default behavior is to not read (false):
+      read-data: false
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+
+#------------------------------------------------------------------------------
+# Allows to keep repository mirrors by syncing data from one repository to
+# another (by default, syncs all hosts and tags). Useful to keep total or
+# partial remote copies of local repositories by only syncing latest changes.
+# Needs to be run on a separated schedule.
+#------------------------------------------------------------------------------
+  default-copy:
+    inherit: default
+    copy:
+      # Only consider snapshots for this host (can be specified multiple times)
+      # (default: $RESTIC_HOST). Boolean true is replaced with the hostname of
+      # the system. Examples: true, false, "host")
+      host: false
+      # Copy chunker parameters when initializing the remote repo
+      # (Default is true)
+      initialize-copy-chunker-params: true
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+      # Only consider snapshots including tag[,tag,...]. Boolean true is
+      # replaced with the tags from section “backup”.
+      # Examples: true, false, "tag"
+      tag: false
+
+#------------------------------------------------------------------------------
+# Same use case as backup-retention, but adds check.
+# Profiles inheriting this profile require 2 (separated) schedules to operate
+# (one for backup/retention and another for check).
+#------------------------------------------------------------------------------
+  default-backup-retention-check:
+    inherit: default-backup-retention
+    check:
+      # Reads all data blobs.
+      # This is very slow on large repos located at remote locations.
+      # Default behavior is to not read (false):
+      read-data: false
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+
+#------------------------------------------------------------------------------
+# Same use case as default-forget, but adds check.
+# Profiles inheriting this profile require 2 (separated) schedules to operate
+# (one for forget and another for check).
+#------------------------------------------------------------------------------
+  default-forget-check:
+    inherit: default-forget
+    check:
+      # Reads all data blobs.
+      # This is very slow on large repos located at remote locations.
+      # Default behavior is to not read (false):
+      read-data: false
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+
+#------------------------------------------------------------------------------
+# Same use case as backup-retention-check, above adding copy.
+# Profiles inheriting this profile require 3 (separated) schedules to operate
+# (one for forget, another for check and another more for copy)
+#------------------------------------------------------------------------------
+  default-forget-copy-check:
+    inherit: default-forget-check
+    copy:
+      # Only consider snapshots for this host (can be specified multiple times)
+      # (default: $RESTIC_HOST). Boolean true is replaced with the hostname of
+      # the system. Examples: true, false, "host")
+      host: false
+      # Copy chunker parameters when initializing the remote repo
+      # (Default is true)
+      initialize-copy-chunker-params: true
+      # Specify whether the schedule runs with system or user privileges.
+      # Is one of auto, system, user, user_logged_on
+      # (Default is auto)
+      schedule-permission: auto
+      # Only consider snapshots including tag[,tag,...]. Boolean true is
+      # replaced with the tags from section “backup”.
+      # Examples: true, false, "tag"
+      tag: false

@@ -1,0 +1,11 @@
+/var/log/resticprofile/resticprofile.log
+/var/log/resticprofile/scheduled-tasks.log {
+  compress
+  copytruncate
+  daily
+  dateext
+  dateformat .%Y%m%d_%H%M%S
+  missingok
+  notifempty
+  rotate 30
+}

@@ -1,0 +1,56 @@
+# Mountpoints & volatile system paths:
+/dev/*
+/media/*
+/mnt/*
+/proc/*
+/run/*
+/sys/*
+/tmp/*
+/var/cache/*
+/var/tmp/*
+
+# Well known files & paths to exclude from backup safely:
+**/*~
+**/*.bak
+**/.directory
+**/.gvfs
+**/*.old
+**/*.swp
+**/lost+found/
+**/.[Tt]rash*/*
+**/[Tt]humbs.db
+**/.[Cc]ache/*
+
+# Well known files & paths to exclude from home (directory or subvolume):
+
+# Under home/*/.config:
+.config/**/[Cc]ache/*
+.config/**/[Cc]aches/*
+.config/**/Code Cache/*
+.config/**/GPUCache/*
+.config/**/Crashpad/*
+.config/**/Session Storage/*
+.config/**/[Tt]emp/*
+.config/**/[Tt]mp/*
+
+# Under home/*/.local/share:
+.local/share/Trash/*
+.local/share/**/[Tt]emp/*
+.local/share/**/[Tt]mp/*
+
+# Under Steam (.local/share/Steam or subvolume:
+.local/share/Steam/steamapps/shadercache/*
+.local/share/Steam/steamapps/downloading/*
+.local/share/Steam/config/htmlcache/*
+.local/share/Steam/appcache/*
+.local/share/Steam/depotcache/*
+
+# Under home/*/.var/app:
+.var/app/*/[Cc]ache/*
+.var/app/*/[Tt]emp/*
+.var/app/*/[Tt]mp/*
+.var/app/*/config/**/[Cc]ache/*
+.var/app/*/config/**/Code Cache/*
+.var/app/*/config/**/GPUCache/*
+.var/app/*/config/**/[Tt]emp/*
+.var/app/*/config/**/[Tt]mp/*
