@@ -1,0 +1,16 @@
+version: "2"
+
+groups:
+  system-backups:
+    #parallel: true
+    profiles:
+      - rootfs
+    schedules:
+      backup:
+        at: "2,14:0"
+        #at: "*:0,5,10,15,20,15,30,35,40,45,50,55"
+
+# References:
+# https://creativeprojects.github.io/resticprofile/reference/groups/index.html
+# https://creativeprojects.github.io/resticprofile/configuration/v2/
+# https://github.com/creativeprojects/resticprofile/pull/333

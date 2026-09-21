@@ -1,0 +1,27 @@
+version: "2"
+
+# Internal variables:
+{{ $rootfs_path := "/" }}
+
+profiles:
+  rootfs:
+    inherit: default-backup-retention
+    env-file...:
+      - secrets/.env-restic
+    backup:
+      exclude-file:
+      # Standard exclude patterns
+        - excludes/linux
+      #exclude:
+        # Custom exclude patterns:
+        #- ""
+      # Enable backup with relative source paths. This will change the working
+      # directory of the “restic backup” command to “source-base”, and will not
+      # expand “source” to an absolute path
+      # (Default is false)
+      source-relative: true
+      # The base path to resolve relative backup paths against.
+      # Defaults to current directory if unset or empty
+      source-base: {{ $rootfs_path }}
+      # The paths to backup
+      source: [.]

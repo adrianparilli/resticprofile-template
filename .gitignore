@@ -215,8 +215,11 @@ docker-compose.yml.config
 # ==============================================================================
 # Custom excludes:
 
-# Allow example files:
+# Allow example files
 !env*example
+
+# Allow profiles folder
+!profiles.d
 
 # ==============================================================================
 # https://github.com/github/gitignore
