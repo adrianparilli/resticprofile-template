@@ -58,97 +58,88 @@ elif [[ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER_NAME" 2>/dev/nu
   missing_parameters=1
 fi
 
-# Validate if DB_ENGINE was passed
+# Validate DB_ENGINE
 if [ -z $DB_ENGINE ]; then
-  echo "ERROR: Parameter '--db-engine=<mariadb|mysql|postgres|mongo|mssql>' is required"
-  missing_parameters=1
+  # If DB_ENGINE was not passed, attempt to guess it by parsing the image name from the container
+  DB_ENGINE=$(docker inspect -f {{.Config.Image}} $DB_CONTAINER_NAME  | grep -i -o -e  "mariadb" -e "mysql" -e "postgres" -e "mongo" -e "mssql")
+
+  # Re-check DB_ENGINE
+  if [ -z $DB_ENGINE ]; then
+    echo "ERROR: Could not recognize the database engine of container '$DB_CONTAINER_NAME'. Parameter --db-engine' is required."
+    missing_parameters=1
+  else
+    echo "INFO: Database engine of container '$DB_CONTAINER_NAME' was auto-detected as '$DB_ENGINE'"
+  fi
 
 else
+
   # Validate if DB_ENGINE is valid and mandatory arguments/variables as per engine case
   case $DB_ENGINE in
 
-    mariadb|mysql)
-
-      #DB_VARIABLE_NAME="${DB_ENGINE^^}_DATABASE"
-      #DB_NAME="${DB_NAME:-"${!DB_VARIABLE_NAME}"}"
-
-      if [ -z "$DB_NAME" ]; then
-
-        # --db-name not passed as argument. Attempt to source the correct variable name, according the used db engine (MARIADB_DATABASE or MYSQL_DATABASE)
-        DB_VARIABLE_NAME=$(echo "${DB_ENGINE}_DATABASE" | tr '[:lower:]' '[:upper:]')
-        eval "DB_NAME=\$$DB_VARIABLE_NAME"
-
-        # Re-evaluate DB_NAME
-        if [ -z "$DB_NAME" ]; then
-          echo "ERROR: Either missing parameter '--db-name' or variable ${!DB_VARIABLE_NAME} was not passed with environment. Cannot proceed without a database name to dump."
-          missing_parameters=1
-        fi
-      fi
+    mariadb|mysql|postgres|mongo)
     ;;
 
     mssql)
       if [ -z "$DB_DUMP_PATH" ]; then
-        echo "ERROR: Missing parameter '--dump-path'. Cannot proceed without a path to dump."
+        echo "ERROR: Database Engine '$DB_ENGINE' requires the parameter '--dump-path' (as seen from inside container '$DB_CONTAINER_NAME') in order to proceed."
         missing_parameters=1
       fi
     ;;
 
-    postgres|mongo)
-    ;;
-
     *)
-      echo "ERROR: Unknown database engine: '$DB_ENGINE' for parameter --db-engine."
+      echo "ERROR: Unsupported database engine: '$DB_ENGINE' for parameter --db-engine."
       missing_parameters=1
     ;;
   esac
 fi
 
 
+# If there are no missing parameters Remaining variables are taken (or guessed) and passed in this order of precendence:
+# - If corresponding arguments were passed, it will take these values directly
+# - If no corresponding arguments were passed, it will try to get them from the inherited environment
+# - If no corresponding environment exists, it will pass the corresponding variable names as arguments to the container
 if [ -z $missing_parameters ]; then
-
-  # NOTE: Remaining variables not passed via parameters are taken from either environment directly,
-  # or set with known defaults for the recognized official docker images.
-  # Dump still may fail if cannot satisfy all environment variables required as per container setup!
-
-  # Fetch non passed arguments from inherited variables, assuming defaults when environment was not found
   case $DB_ENGINE in
 
     mariadb)
-      DB_USER=${DB_USER:-${MARIADB_USER:-"root"}}
-      DB_PASSWD=${DB_PASSWD:-${MARIADB_PASSWORD:-"$MARIADB_ROOT_PASSWORD"}}
+      DB_NAME=${DB_NAME:-${MARIADB_DATABASE:-"\$MARIADB_DATABASE"}}
+      DB_USER=${DB_USER:-${MARIADB_USER:-"\$MARIADB_USER"}}
+
+      [[ $DB_USER == "root" ]] \
+        && DB_PASSWD=${DB_PASSWD:-${MARIADB_ROOT_PASSWORD:-"\$MARIADB_ROOT_PASSWORD"}}
+        || DB_PASSWD=${DB_PASSWD:-${MARIADB_PASSWORD:-"\$MARIADB_PASSWORD"}}
+
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"--single-transaction"}
       DB_SUFFIX=${DB_SUFFIX:-"sql"}
-      AUTH_ARGS="--user=\"$DB_USER\""
-      [ -n "$DB_PASSWD" ] && AUTH_ARGS="$AUTH_ARGS --password=\"$DB_PASSWD\""
 
       # Defaults to image's mountpoint to be restored in a fresh start
       DB_DUMP_PATH=${DB_DUMP_PATH:-"/docker-entrypoint-initdb.d"}
 
       # Create base dump command for MariaDB
-      BASE_DB_DUMP_COMMAND="mariadb-dump $DB_DUMP_ARGS $AUTH_ARGS --result-file=\"$DB_DUMP_PATH/__DB_DUMP_FILENAME__\" \"$DB_NAME\""
+      BASE_DB_DUMP_COMMAND="mariadb-dump $DB_DUMP_ARGS --user=\"$DB_USER\" --password=\"$DB_PASSWD\" --result-file=\"$DB_DUMP_PATH/__DB_DUMP_FILENAME__\" \"$DB_NAME\""
     ;;
 
     mysql)
-      DB_USER=${DB_USER:-${MYSQL_USER:-"root"}}
-      DB_PASSWD=${DB_PASSWD:-${MYSQL_PASSWORD:-"$MYSQL_ROOT_PASSWORD"}}
+      DB_NAME=${DB_NAME:-${MYSQL_DATABASE:-"\$MYSQL_DATABASE"}}
+      DB_USER=${DB_USER:-${MYSQL_USER:-"\$MYSQL_USER"}}
+
+      [[ $DB_USER == "root" ]] \
+        && DB_PASSWD=${DB_PASSWD:-${MYSQL_ROOT_PASSWORD:-"\$MYSQL_ROOT_PASSWORD"}}
+        || DB_PASSWD=${DB_PASSWD:-${MYSQL_PASSWORD:-"\$MYSQL_PASSWORD"}}
+
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"--single-transaction"}
       DB_SUFFIX=${DB_SUFFIX:-"sql"}
-      AUTH_ARGS="--user=\"$DB_USER\""
-      [ -n "$DB_PASSWD" ] && AUTH_ARGS="$AUTH_ARGS --password=\"$DB_PASSWD\""
 
       # Defaults to image's mountpoint to be restored in a fresh start
       DB_DUMP_PATH=${DB_DUMP_PATH:-"/docker-entrypoint-initdb.d"}
 
-      # Create base dump command for Mysql
-      BASE_DB_DUMP_COMMAND="mysqldump $DB_DUMP_ARGS $AUTH_ARGS --result-file=\"$DB_DUMP_PATH/__DB_DUMP_FILENAME__\" \"$DB_NAME\""
+      # Create base dump command for MySQL
+      BASE_DB_DUMP_COMMAND="mysqldump $DB_DUMP_ARGS --user=\"$DB_USER\" --password=\"$DB_PASSWD\" --result-file=\"$DB_DUMP_PATH/__DB_DUMP_FILENAME__\" \"$DB_NAME\""
     ;;
 
     postgres)
-      DB_USER=${DB_USER:-${POSTGRES_USER:-"postgres"}}
-
-      # If POSTGRES_DB is unset, official images default database name to POSTGRES_USER value
-      DB_NAME=${DB_NAME:-${POSTGRES_DB:-"$DB_USER"}}
-
+      DB_USER=${DB_USER:-${POSTGRES_USER:-"\$POSTGRES_USER"}}
+      DB_NAME=${DB_NAME:-${POSTGRES_DB:-"\$POSTGRES_DB"}}
       DB_PASSWD=${DB_PASSWD:-"$POSTGRES_PASSWORD"}
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-""}
       DB_SUFFIX=${DB_SUFFIX:-"sql"}
