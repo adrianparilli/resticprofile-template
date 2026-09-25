@@ -5,5 +5,5 @@
 
 # Detect when resticprofile runs inside a docker container
 [ -f "/.dockerenv" ] \
-    && DOCKERIZED="true" \
-    || DOCKERIZED="false"
+  && DOCKERIZED="true" \
+  || DOCKERIZED="false"
