@@ -4,7 +4,7 @@
 set -e
 
 # Read parameters until all arguments has been consumed
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
 
   case $1 in
 
@@ -53,7 +53,7 @@ if [ -z $DB_CONTAINER_NAME ]; then
   missing_parameters=1
 
 # Validate if DB_CONTAINER_NAME exists and is running
-elif [[ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER_NAME" 2>/dev/null)" != "true" ]]; then
+elif [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER_NAME" 2>/dev/null)" != "true" ]; then
   echo "ERROR: Container '$DB_CONTAINER_NAME' is not running, or does not exist."
   missing_parameters=1
 fi
@@ -105,8 +105,8 @@ if [ -z $missing_parameters ]; then
       DB_NAME=${DB_NAME:-${MARIADB_DATABASE:-"\$MARIADB_DATABASE"}}
       DB_USER=${DB_USER:-${MARIADB_USER:-"\$MARIADB_USER"}}
 
-      [[ $DB_USER == "root" ]] \
-        && DB_PASSWD=${DB_PASSWD:-${MARIADB_ROOT_PASSWORD:-"\$MARIADB_ROOT_PASSWORD"}}
+      [ $DB_USER = "root" ] \
+        && DB_PASSWD=${DB_PASSWD:-${MARIADB_ROOT_PASSWORD:-"\$MARIADB_ROOT_PASSWORD"}} \
         || DB_PASSWD=${DB_PASSWD:-${MARIADB_PASSWORD:-"\$MARIADB_PASSWORD"}}
 
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"--single-transaction"}
@@ -123,8 +123,8 @@ if [ -z $missing_parameters ]; then
       DB_NAME=${DB_NAME:-${MYSQL_DATABASE:-"\$MYSQL_DATABASE"}}
       DB_USER=${DB_USER:-${MYSQL_USER:-"\$MYSQL_USER"}}
 
-      [[ $DB_USER == "root" ]] \
-        && DB_PASSWD=${DB_PASSWD:-${MYSQL_ROOT_PASSWORD:-"\$MYSQL_ROOT_PASSWORD"}}
+      [[ $DB_USER = "root" ]] \
+        && DB_PASSWD=${DB_PASSWD:-${MYSQL_ROOT_PASSWORD:-"\$MYSQL_ROOT_PASSWORD"}} \
         || DB_PASSWD=${DB_PASSWD:-${MYSQL_PASSWORD:-"\$MYSQL_PASSWORD"}}
 
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"--single-transaction"}
@@ -163,8 +163,8 @@ if [ -z $missing_parameters ]; then
 
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"--quiet"}
       DB_SUFFIX=${DB_SUFFIX:-"bson"}
-      [[ -n "$DB_USER" && -n "$DB_PASSWD" ]] && MONGO_AUTH="--username=\"$DB_USER\" --password=\"$DB_PASSWD\" --authenticationDatabase=admin"
-      [[ "$DB_NAME" != "all_dbs" ]] && MONGO_DB_ARG="-d \"$DB_NAME\""
+      [ -n "$DB_USER" ] && [ -n "$DB_PASSWD" ] && MONGO_AUTH="--username=\"$DB_USER\" --password=\"$DB_PASSWD\" --authenticationDatabase=admin"
+      [ "$DB_NAME" != "all_dbs" ] && MONGO_DB_ARG="-d \"$DB_NAME\""
 
       # Defaults to image's mountpoint to be restored in a fresh start
       DB_DUMP_PATH=${DB_DUMP_PATH:-"/docker-entrypoint-initdb.d"}
@@ -192,13 +192,13 @@ if [ -z $missing_parameters ]; then
   DB_DUMP_FILENAME=$DB_NAME.$(read -r uptime _ < /proc/uptime && echo "$(date +%Y-%m-%d+%H_%M_%S).${uptime#*.}").$DB_SUFFIX
 
   # Parse BASE_DB_DUMP_COMMAND into the definitive dump command using DB_DUMP_FILENAME
-  DB_DUMP_COMMAND=${BASE_DB_DUMP_COMMAND/__DB_DUMP_FILENAME__/$DB_DUMP_FILENAME}
+  DB_DUMP_COMMAND=${BASE_DB_DUMP_COMMAND%%__DB_DUMP_FILENAME__*}$DB_DUMP_FILENAME${BASE_DB_DUMP_COMMAND#*__DB_DUMP_FILENAME__}
 
   # Dump the database
   echo "Dumping database before $PROFILE_COMMAND operation..."
   docker exec "$DB_CONTAINER_NAME" sh -c "$DB_DUMP_COMMAND"
 
-  if [[ $? -eq 0 ]]; then
+  if [ $? -eq 0 ]; then
 
     echo "Database backup '$DB_DUMP_FILENAME' created sucessfully."
 
