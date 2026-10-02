@@ -32,41 +32,41 @@ profiles:
       # The paths to backup
       source: [.]
 
-    # When a container requires to be stopped for backup concurrency,
-    # this variant of the above stops the container (if found running) first,
-    # and then starts it after backup took place.
-    # The script invoked allows multiple containers as arguments, and will
-    # start or stop them in the same order they are being passed.
-    default-service-backup-downtime:
-      inherit: default-service-backup
-      backup:
-        ...run-before:
+  # When a container requires to be stopped for backup concurrency,
+  # this variant of the above stops the container (if found running) first,
+  # and then starts it after backup took place.
+  # The script invoked allows multiple containers as arguments, and will
+  # start or stop them in the same order they are being passed.
+  default-service-backup-downtime:
+    inherit: default-service-backup
+    backup:
+      ...run-before:
         - $SCRIPTS_PATH/docker_management.sh stop $PROFILE_NAME
-        run-finally...:
+      run-finally...:
         - $SCRIPTS_PATH/docker_management.sh start $PROFILE_NAME
 
-    # When a stack contains a database container (e.g. mariadb), the invoked
-    # script dumps the DB to a persistent location by using inherited environment
-    # variables passed to it, deleting old dumps created by itself in the
-    # process. All this, right before to start with the backup operation.
-    default-service-backup-database:
-      env-file...:
-        - {{ $docker_path }}/{{ .Profile.Name }}/.env-{{ $db_engine_name }}
-      inherit: default-service-backup
-      backup:
-        run-before...:
-          - $SCRIPTS_PATH/db_dump.sh --db-engine={{ $db_engine_name }} --db-container-name=$PROFILE_NAME-{{ $db_engine_name }}
+  # When a stack contains a database container (e.g. mariadb), the invoked
+  # script dumps the DB to a persistent location by using inherited environment
+  # variables passed to it, deleting old dumps created by itself in the
+  # process. All this, right before to start with the backup operation.
+  default-service-backup-database:
+    env-file...:
+      - {{ $docker_path }}/{{ .Profile.Name }}/.env-{{ $db_engine_name }}
+    inherit: default-service-backup
+    backup:
+      run-before...:
+        - $SCRIPTS_PATH/db_dump.sh --db-engine={{ $db_engine_name }} --db-container-name=$PROFILE_NAME-{{ $db_engine_name }}
 
 # Functional examples of backup profiles:
 
 # Live backup:
-#    some-service-live-backup:
-#      inherit: default-service-backup
+#  some-service-live-backup:
+#    inherit: default-service-backup
 
 # Concurrent backup:
-#    some-service-concurrent-backup:
-#      inherit: default-service-backup-downtime
+#  some-service-concurrent-backup:
+#    inherit: default-service-backup-downtime
 
 # Backup including database dump
-#    some-service-db-backup:
-#      inherit: default-service-backup-database
+#  some-service-db-backup:
+#    inherit: default-service-backup-database
