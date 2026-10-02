@@ -26,7 +26,7 @@ case $docker_command in
         if [ $docker_status -eq 0 ]; then
           touch "$flag_file_path/.restic_stopped_$container"
         else
-          FAILED_CONTAINER=$container
+          failed_container=$container
           break
         fi
       fi
@@ -45,7 +45,7 @@ case $docker_command in
             rm -f "$flag_file_path/.restic_stopped_$container"
 
           else
-            FAILED_CONTAINER=$container
+            failed_container=$container
             break
           fi
 
@@ -61,8 +61,10 @@ case $docker_command in
   ;;
 esac
 
-if [[ $docker_status -ne 0 ]]; then
-  echo "ERROR: Docker command '$docker_command' on container '$FAILED_CONTAINER' failed (exit code: $docker_status)"
+if [ $docker_status -ne 0 ]; then
+  echo "ERROR: Docker command '$docker_command' on container '$failed_container' failed (exit code: $docker_status)"
+  [ docker_command = "start" ] \
+    && echo "ALERT: One or more containers associated with profile '$RESTICPROFILE_PROFILE' could not be restored to previous state!"
 fi
 
 exit $docker_status
