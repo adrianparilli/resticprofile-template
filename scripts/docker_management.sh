@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
 docker_command=$1
 shift
 
-flag_file_path="/var/tmp"
+flag_file_path="/tmp/resticprofile"
 docker_status=0
 
 # Load system environmental variables
@@ -18,14 +18,15 @@ case $docker_command in
   stop)
     for container in "$@"; do
 
-      if [[ "$(docker container inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]]; then
+      if [ "$(docker container inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" = "true" ]; then
 
         docker stop "$container" >/dev/null
         docker_status=$?
 
-        if [[ $docker_status -eq 0 ]]; then
+        if [ $docker_status -eq 0 ]; then
           touch "$flag_file_path/.restic_stopped_$container"
         else
+          FAILED_CONTAINER=$container
           break
         fi
       fi
@@ -35,15 +36,16 @@ case $docker_command in
     start)
       for container in "$@"; do
 
-        if [[ -f "$flag_file_path/.restic_stopped_$container" ]]; then
+        if [ -f "$flag_file_path/.restic_stopped_$container" ]; then
 
           docker start "$container" >/dev/null
           docker_status=$?
 
-          if [[ $docker_status -eq 0 ]]; then
+          if [ $docker_status -eq 0 ]; then
             rm -f "$flag_file_path/.restic_stopped_$container"
 
           else
+            FAILED_CONTAINER=$container
             break
           fi
 
@@ -60,7 +62,7 @@ case $docker_command in
 esac
 
 if [[ $docker_status -ne 0 ]]; then
-  echo "WARNING: Docker command '$docker_command' failed (exit code: $docker_status)"
+  echo "ERROR: Docker command '$docker_command' on container '$FAILED_CONTAINER' failed (exit code: $docker_status)"
 fi
 
 exit $docker_status
