@@ -16,8 +16,8 @@ profiles:
         # Custom exclude patterns:
         #- ""
       # Enable backup with relative source paths. This will change the working
-      # directory of the “restic backup” command to “source-base”, and will not
-      # expand “source” to an absolute path
+      # directory of the "restic backup" command to "source-base", and will not
+      # expand "source" to an absolute path
       # (Default is false)
       source-relative: true
       # The base path to resolve relative backup paths against.

@@ -94,7 +94,7 @@ else
 fi
 
 
-# If there are no missing parameters Remaining variables are taken (or guessed) and passed in this order of precendence:
+# If there are no missing parameters, remaining variables are taken (or guessed) and passed in this order of precendence:
 # - If corresponding arguments were passed, it will take these values directly
 # - If no corresponding arguments were passed, it will try to get them from the inherited environment
 # - If no corresponding environment exists, it will pass the corresponding variable names as arguments to the container

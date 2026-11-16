@@ -1,4 +1,6 @@
+###############################################################################
 # Environment variables to be used among all profiles
+###############################################################################
 
 # Path to locate and run custom scripts
 # "/etc/resticprofile/scripts" is useful for most use cases
@@ -6,7 +8,8 @@
 #SCRIPTS_PATH=
 
 # Proxy Options
-# Use a tunneled proxy (e.g. cloudflare-svc) instead of a plain connection, circumventing ISP bandwidth limits and DPI
+# Use a tunneled proxy (e.g. cloudflare-svc) instead of a plain connection,
+# circumventing ISP bandwidth limits and deep packet inspection (DPI)
 #ALL_PROXY=socks5h://127.0.0.1:1080
 #HTTPS_PROXY=socks5h://127.0.0.1:1080
 
@@ -20,6 +23,7 @@
 # Private SSH key to connect to a host is mandatory, and it's assumed that
 # the public counterpart of this key is correctly appened into host and user's
 # authorized_keys file you are attempting to connect
+#
 # "~/.ssh/<keyfile>"                    # Use your own configured key
 # "/etc/resticprofile/secrets/<keyfile> # Use a custom key
 # "/secrets/<keyfile>"                  # Use any key bind mounted in Docker
@@ -33,9 +37,9 @@
 # Notification Methods
 # This is an alternative method to send notifications about failed commands,
 # besides of native resticprofile's HTTP hooks in absence or monitoring stacks
-# mail: requires configured MTA in order to send emails
-# send-notify: requires libnotify and a user with desktop configured
-# unraid-notify: Unraid OS specific notification system
+#   mail:          requires configured MTA in order to send emails
+#   send-notify:   requires libnotify and a user with desktop configured
+#   unraid-notify: Unraid OS specific notification system
 # When unset, no notifications are sent
 #NOTIFY_METHOD=
 
