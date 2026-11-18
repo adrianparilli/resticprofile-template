@@ -24,22 +24,22 @@ global:
   # Sets process priority class for resticprofile and child processes
   # (on any OS). Is one of: idle, background, low, normal, high or highest.
   # (Default is normal)
-  priority: low
+  #priority: low
   # Initialize a repository if missing.
   # (Default is false)
-  initialize: true
+  #initialize: true
   # Enables setting the linux I/O priority class and level for resticprofile
   # and child processes (only on linux OS).
   # (Default is false)
-  ionice: true
+  #ionice: true
   # Sets the linux ionice-class (I/O scheduling class) to apply when ionice
   # is enabled (1=realtime, 2=best-effort, 3=idle).
   # (Default is 2)
-  ionice-class: 2
+  #ionice-class: 2
   # Sets the linux ionice-level (I/O priority within the scheduling class) to
   # apply when ionice is enabled (0=highest priority, 7=lowest priority).
   # (Default is 0)
-  ionice-level: 7
+  #ionice-level: 7
   # Sets defaults for all schedules
   schedule-defaults:
     # Redirect the output into a log file or to syslog when running on schedule
@@ -51,12 +51,12 @@ global:
   # Selects the scheduler: auto, launchd, systemd, taskscheduler or crond
   # (Default is auto, uses the default scheduler of your operating system)
   # NOTE: On docker official image, you need to choose crond explicitly
-  scheduler: auto
+  #scheduler: auto
   # The shell that is used to run commands (default is OS specific, or auto).
   # Examples:              sh, bash, pwsh, powershell, cmd
   # Standard systems:      bash
   # Official docker image: ash
-  shell: auto
+  #shell: auto
 
 ###############################################################################
 # Default profiles. Use these templates below to build custom profiles,
@@ -77,7 +77,7 @@ profiles:
     # Be verbose (true for level 1 or a number for increased verbosity,
     # max level is 2.
     # (Default is 0)
-    verbose: 0
+    #verbose: 1
     # Allows to lock when the existing lock is considered stale
     force-inactive-lock: true
     # Path to the lock file to use with resticprofile locks
