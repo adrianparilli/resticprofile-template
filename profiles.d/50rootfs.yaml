@@ -1,13 +1,22 @@
 version: "2"
 
-# Internal variables:
+# Rootfs path (internal variable)
+# This can be any absolute path to folder inside rootfs tree, including
+# '/'. On some filesystems (e.g. BTRFS), you most likely want to backup
+# a read-only snapshopt instead.
 {{ $rootfs_path := "/" }}
+
+# Optionally, Environment can be read from, e.g. .env-common, and
+# '.Env.{VARIABLE}' or '.Env.VARIABLE' will expand ${VARIABLE} and
+# $VARIABLE, respectively (enclosed within double curly brackets and spaces).
+# This is more useful for variable expansion on multiple files.
 
 profiles:
   rootfs:
     inherit: default-backup-retention
     env-file...:
       - secrets/.env-restic
+      #- .env-rootfs
     backup:
       exclude-file:
       # Standard exclude patterns
@@ -23,5 +32,19 @@ profiles:
       # The base path to resolve relative backup paths against.
       # Defaults to current directory if unset or empty
       source-base: {{ $rootfs_path }}
+      #source-base: {{ .Env.$ROOTFS_PATH }}
       # The paths to backup
       source: [.]
+
+# Functional examples of backup profiles:
+
+{{ $data_path := "/data" }}
+
+# Folder backup:
+#  some-service-live-backup:
+#    inherit: rootfs
+#    env-file...:
+       #- .env-data
+#    backup:
+#      source-base: {{ $data_path }}
+#      #source-base: {{ .Env.DATA_PATH }}

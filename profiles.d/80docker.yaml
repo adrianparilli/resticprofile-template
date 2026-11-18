@@ -1,17 +1,14 @@
 version: "2"
 
-# Internal variables
-
-# Docker Data Path:
-# In standard systems, depends on the docker architecture (e.g. /data/docker)
-# In docker containers, is the resulting path of container's mount (e.g. /docker)
+# Docker Data Path (internal variable)
+# In standard systems depends on the docker architecture (e.g. /data/docker)
+# In docker containers, the resulting path of container's mount (e.g. /docker)
 {{ $docker_path := "/data/docker" }}
 
-# DB Engine Name:
-# script dump_db.sh supports one of the following engines:
-# mariadb, mysql, postgres, mongo and mssql
-# Refer to script's help for more info about its usage.
-{{ $db_engine_name := "mariadb" }}
+# Optionally, Environment can be read from, e.g. .env-common, and
+# '.Env.{VARIABLE}' or '.Env.VARIABLE' will expand ${VARIABLE} and
+# $VARIABLE, respectively (enclosed within double curly brackets and spaces).
+# This is more useful for variable expansion on multiple files.
 
 profiles:
   # Most common use case is to backup live containers, preferably scheduled
@@ -29,6 +26,7 @@ profiles:
       # The base path to resolve relative backup paths against.
       # Defaults to current directory if unset or empty
       source-base: {{ $docker_path }}/{{ .Profile.Name }}
+      #source-base: {{ .Env.$DOCKER_PATH }}/{{ .Profile.Name }}
       # The paths to backup
       source: [.]
 
@@ -45,17 +43,23 @@ profiles:
       run-finally...:
         - $SCRIPTS_PATH/docker_management.sh start $PROFILE_NAME
 
-  # When a stack contains a database container (e.g. mariadb), the invoked
-  # script dumps the DB to a persistent location by using inherited environment
-  # variables passed to it, deleting old dumps created by itself in the
-  # process. All this, right before to start with the backup operation.
+  # When some container into a compose is a DB engine, this template performs a
+  # dump prior to the operation, allowing thus concurrent backup of databases.
+  # The involved script (db_dump.sh) only needs '--db-container-name' to work
+  # with the following official DB engine images: Mariadb, Mysql, Postgres,
+  # Mongo and Mssql (for mssql, '--dump-path' argument is also required).
+  # Environment can be passed by either appending corresponding env files into
+  # 'env-file...' section below or using optional arguments for custom DB dump.
+  # If no environment or optional arguments are passed, the script will attempt
+  # to auto-detect the DB engine and will work with in-container DB environment
   default-service-backup-database:
     env-file...:
-      - {{ $docker_path }}/{{ .Profile.Name }}/.env-{{ $db_engine_name }}
+      - {{ $docker_path }}/{{ .Profile.Name }}/.env-db
+      #- {{ .Env.$DOCKER_PATH }}/{{ .Profile.Name }}/.env-db
     inherit: default-service-backup
     backup:
       run-before...:
-        - $SCRIPTS_PATH/db_dump.sh --db-engine={{ $db_engine_name }} --db-container-name=$PROFILE_NAME-{{ $db_engine_name }}
+        - $SCRIPTS_PATH/db_dump.sh --db-container-name=$PROFILE_NAME-db
 
 # Functional examples of backup profiles:
 
