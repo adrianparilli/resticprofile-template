@@ -174,17 +174,17 @@ if [ -z $missing_parameters ]; then
     ;;
 
     mssql)
-      DB_NAME=${DB_NAME:-"$DATABASE"}
+      DB_NAME=${DB_NAME:-"\$DATABASE"}
       DB_USER=${DB_USER:-"SA"}
 
       # Capture modern official MSSQL var, fallback to legacy SA_PASSWORD
-      DB_PASSWD=${DB_PASSWD:-${MSSQL_SA_PASSWORD:-"$SA_PASSWORD"}}
+      DB_PASSWD=${DB_PASSWD:-${MSSQL_SA_PASSWORD:-${SA_PASSWORD:-"\$SA_PASSWORD"}}}
 
       DB_DUMP_ARGS=${DB_DUMP_ARGS:-"-C -b -V16"}
       DB_SUFFIX=${DB_SUFFIX:-"bak"}
 
       # Create base dump command for MSSQL
-      BASE_DB_DUMP_COMMAND="bash -c \"/opt/mssql-tools18/bin/sqlcmd $DB_DUMP_ARGS -S localhost -U \"$DB_USER\" -P \"$DB_PASSWD\" -Q \\\"BACKUP DATABASE $DB_NAME TO DISK = '$DB_DUMP_PATH/__DB_DUMP_FILENAME__' WITH INIT, NAME='$DB_NAME', NOSKIP, NOFORMAT;\\\"\""
+      BASE_DB_DUMP_COMMAND="/opt/mssql-tools18/bin/sqlcmd $DB_DUMP_ARGS -S localhost -U \"$DB_USER\" -P \"$DB_PASSWD\" -Q \"BACKUP DATABASE $DB_NAME TO DISK = '$DB_DUMP_PATH/__DB_DUMP_FILENAME__' WITH INIT, NAME='$DB_NAME', NOSKIP, NOFORMAT;\""
     ;;
   esac
 
